@@ -1,0 +1,46 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "storagecountname": {
+        "type": "string",
+        "defaultValue": "madhanmv5809892"
+      },
+      "containersname": {
+        "type": "array",
+        "defaultValue": ["blob1", "blob2"]
+      }
+    },
+    "resources": [
+      {
+        "name": "[parameters('storagecountname')]",
+        "type": "Microsoft.Storage/storageAccounts",
+        "apiVersion": "2023-05-01",
+        "location": "[resourceGroup().location]",
+        "kind": "StorageV2",
+        "sku": {
+          "name": "Standard_LRS",
+          "tier": "Standard"
+        },
+        "properties": {
+          "accessTier": "Hot"
+        }
+      },
+      {
+        "name": "[format('{0}/default/{1}', parameters('storagecountname'), parameters('containersname')[copyIndex()])]",
+        "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+        "apiVersion": "2023-05-01",
+        "dependsOn": [
+          "[resourceId('Microsoft.Storage/storageAccounts', parameters('storagecountname'))]"
+        ],
+        "properties": {
+          "publicAccess": "None"
+        },
+        "copy": {
+          "name": "containerCopy",
+          "count": "[length(parameters('containersname'))]"
+        }
+      }
+    ]
+  }
+  
