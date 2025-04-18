@@ -1,0 +1,235 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "publicIpName": {
+        "type": "string",
+        "defaultValue": "winpip"
+      },
+      "dnsname": {
+        "type": "string",
+        "metadata": {
+          "description": "dns name to access vm"
+        },
+        "defaultValue": "madhanmv"
+      },
+      "location": {
+        "type": "string",
+        "metadata": {
+          "description": "region were to deploy resources"
+        },
+        "defaultValue": "east us"
+      },
+      "cidrrange": {
+        "type": "string",
+        "metadata": {
+          "description": "virtual network cidr range"
+        },
+        "defaultValue": "10.1.0.0/16"
+      },
+      "subnetPrefix": {
+        "type": "string",
+        "metadata": {
+          "description": "subnet range"
+        },
+        "defaultValue": "10.1.0.0/24"
+      },
+      "vmname": {
+        "type": "string",
+        "metadata": {
+          "description": "name of virtual machine"
+        },
+        "defaultValue": "winvm101"
+      },
+      "vmSize": {
+        "type": "string",
+        "metadata": {
+          "description": "enter VM size to support the workload that you want to run."
+        },
+        "defaultValue": "Standard_B1s"
+      },
+      "adminUsername": {
+        "type": "string",
+        "metadata": {
+          "description": "admin username to login virtual machine"
+        },
+        "defaultValue": "azuser"
+      },
+      "adminPassword": {
+        "type": "string",
+        "metadata": {
+          "description": "admin password to login virtual machine"
+        },
+        "defaultValue": "madhanshiva@mv2"
+      }
+    },
+    "functions": [],
+    "variables": {
+      "networkSecurityGroupName": "[concat(parameters('vmname'),'-nsg')]",
+      "virtualNetworkName": "[concat(parameters('vmname'),'-vnet')]",
+      "subnetName": "[concat(variables('virtualNetworkName'),'-subnet')]",
+      "nicName": "[concat(variables('virtualNetworkName'),'-nic')]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Network/publicIPAddresses",
+        "apiVersion": "2024-03-01",
+        "name": "[parameters('publicIpName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[parameters('dnsname')]"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "apiVersion": "2024-03-01",
+        "name": "[variables('networkSecurityGroupName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "securityRules": [
+            {
+              "name": "default-allow-3389",
+              "properties": {
+                "priority": 1000,
+                "access": "Allow",
+                "direction": "Inbound",
+                "destinationPortRange": "3389",
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "*"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.Network/virtualNetworks",
+        "apiVersion": "2024-03-01",
+        "name": "[variables('virtualNetworkName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "addressSpace": {
+            "addressPrefixes": "[array(parameters('cidrrange'))]"
+          },
+          "subnets": [
+            {
+              "name": "[variables('subnetName')]",
+              "properties": {
+                "addressPrefix": "[parameters('subnetPrefix')]"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.Network/networkInterfaces",
+        "apiVersion": "2024-03-01",
+        "name": "[variables('nicName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+                },
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]"
+                }
+              }
+            }
+          ],
+          "networkSecurityGroup": {
+            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+          }
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]",
+          "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+          "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+        ]
+      },
+      {
+        "type": "Microsoft.Compute/virtualMachines",
+        "apiVersion": "2024-07-01",
+        "name": "[parameters('vmName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "hardwareProfile": {
+            "vmSize": "[parameters('vmSize')]"
+          },
+          "osProfile": {
+            "computerName": "[parameters('vmName')]",
+            "adminUsername": "[parameters('adminUsername')]",
+            "adminPassword": "[parameters('adminPassword')]"
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2022-Datacenter",
+              "version": "latest"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "StandardSSD_LRS"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+              }
+            ]
+          }
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+        ]
+      },
+      {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "apiVersion": "2021-07-01",
+        "name": "[concat(parameters('vmName'), '/customScriptExtension')]",
+        "location": "[parameters('location')]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+        ],
+        "properties": {
+          "publisher": "Microsoft.Compute",
+          "type": "CustomScriptExtension",
+          "typeHandlerVersion": "1.10",
+          "autoUpgradeMinorVersion": true,
+          "settings": {
+            "fileUris": [
+              "https://madhanmv5809892.blob.core.windows.net/blob1/powerscript.ps1"
+            ],
+            "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File powerscript.ps1"
+          }
+        }
+      }
+    ],
+    "outputs": {
+      "publicdns": {
+        "type": "string",
+        "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',parameters('publicIpName'))).dnsSettings.fqdn]"
+      },
+      "adminuser": {
+        "type": "string",
+        "value": "[parameters('adminUsername')]"
+      },
+      "adminpswd": {
+        "type": "string",
+        "value": "[parameters('adminPassword')]"
+      }
+    }
+  }
+  

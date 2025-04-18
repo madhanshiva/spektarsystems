@@ -1,0 +1,34 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "publicIpName": {
+        "value": "winpip"
+      },
+      "dnsname": {
+        "value": "madhanmv"
+      },
+      "location": {
+        "value": "east us"
+      },
+      "cidrrange": {
+        "value": "10.1.0.0/16"
+      },
+      "subnetPrefix": {
+        "value": "10.1.0.0/24"
+      },
+      "vmname": {
+        "value": "winvm101"
+      },
+      "vmSize": {
+        "value": "Standard_B2as_v2"
+      },
+      "adminUsername": {
+        "value": "azuser"
+      },
+      "adminPassword": {
+        "value": "madhanshiva@mv2"
+      }
+    }
+  }
+  
