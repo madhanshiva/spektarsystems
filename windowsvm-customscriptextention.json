@@ -61,6 +61,13 @@
           "description": "admin password to login virtual machine"
         },
         "defaultValue": "madhanshiva@mv2"
+      },
+      "powershellscript": {
+        "type": "string",
+        "metadata": {
+          "description": "description"
+        },
+        "defaultValue": "https://madhanmv5809892.blob.core.windows.net/blob1/powerscript.ps1"
       }
     },
     "functions": [],
@@ -210,7 +217,7 @@
           "autoUpgradeMinorVersion": true,
           "settings": {
             "fileUris": [
-              "https://madhanmv5809892.blob.core.windows.net/blob1/powerscript.ps1"
+              "[parameters('powershellscript')]"
             ],
             "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File powerscript.ps1"
           }
